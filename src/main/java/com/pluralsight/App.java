@@ -47,7 +47,7 @@ public class App {
                         System.out.println("Goodbye!");
                         System.exit(0);
                     case 1:
-                        //displayAllShippers(connection);
+                        displayAllShippers(connection);
                         break;
                     case 2:
                         //addShipper(connection);
@@ -66,6 +66,32 @@ public class App {
             System.out.println("Could not connect to DB");
             System.exit(1);
         }
+    }
+
+    // this method displays all shippers in the database sorted by shipper id
+    private static void displayAllShippers(Connection connection) {
+
+        try (
+
+                PreparedStatement preparedStatement = connection.prepareStatement("""
+                        SELECT
+                            *
+                        FROM
+                            Shippers
+                        ORDER BY
+                            ShipperID;
+                        """
+                );
+
+                ResultSet results = preparedStatement.executeQuery();
+
+        ) {
+            printResults(results);
+        } catch (SQLException e) {
+            System.out.println("Could not get all the shippers");
+            System.exit(1);
+        }
+
     }
 
     // this method will be used in the displayMethods to actually print the results to the screen
