@@ -53,7 +53,7 @@ public class App {
                         addShipper(connection);
                         break;
                     case 3:
-                        //updateShipperPhone(connection);
+                        updateShipperPhone(connection);
                         break;
                     case 4:
                         //deleteShipper(connection);
@@ -117,6 +117,32 @@ public class App {
 
         } catch (SQLException e) {
             System.out.println("Could not add the shipper" + e);
+            System.exit(1);
+        }
+
+    }
+
+    // this method updates a shipper's phone number
+    private static void updateShipperPhone(Connection connection) {
+
+        int shipperID = getAInteger("What is the shipper ID? ");
+
+        System.out.print("What is the shipper's new phone number? ");
+        String phone = scanner.nextLine();
+
+        String sql = "UPDATE Shippers SET Phone = ? WHERE ShipperID = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql))
+        {
+
+            preparedStatement.setString(1, phone);
+            preparedStatement.setInt(2, shipperID);
+
+            // Insert row
+            preparedStatement.executeUpdate();
+
+
+        } catch (SQLException e) {
+            System.out.println("Could not update the shipper" + e);
             System.exit(1);
         }
 
