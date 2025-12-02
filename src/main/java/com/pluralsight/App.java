@@ -50,13 +50,14 @@ public class App {
                         displayAllShippers(connection);
                         break;
                     case 2:
-                        //addShipper(connection);
+                        addShipper(connection);
                         break;
                     case 3:
                         //updateShipperPhone(connection);
                         break;
                     case 4:
                         //deleteShipper(connection);
+                        break;
                     default:
                         System.out.println("Invalid choice");
                 }
@@ -94,6 +95,33 @@ public class App {
 
     }
 
+    // this method adds a shipper to the database
+    private static void addShipper(Connection connection) {
+
+        System.out.print("What is the shipper company name? ");
+        String companyName = scanner.nextLine();
+
+        System.out.print("What is the shipper phone number? ");
+        String phone = scanner.nextLine();
+
+        String sql = "INSERT INTO Shippers (CompanyName, Phone) VALUES (?, ?)";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql))
+        {
+
+            preparedStatement.setString(1, companyName);
+            preparedStatement.setString(2, phone);
+
+            // Insert row
+            preparedStatement.executeUpdate();
+
+
+        } catch (SQLException e) {
+            System.out.println("Could not add the shipper" + e);
+            System.exit(1);
+        }
+
+    }
+
     // this method will be used in the displayMethods to actually print the results to the screen
     private static void printResults(ResultSet results) throws SQLException {
         // get the metadata so we have access to the field names
@@ -124,6 +152,7 @@ public class App {
 
     }
 
+    // this method gets an integer
     public static int getAInteger(String message) {
         int input;
         while (true) {
@@ -137,4 +166,5 @@ public class App {
         }
         return input;
     }
+
 }
