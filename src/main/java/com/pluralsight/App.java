@@ -1,6 +1,7 @@
 package com.pluralsight;
 
 import org.apache.commons.dbcp2.BasicDataSource;
+
 import java.sql.*;
 import java.util.Scanner;
 
@@ -12,7 +13,7 @@ public class App {
         String username = System.getenv("username");
         String password = System.getenv("password");
 
-        if (username == null || password== null){
+        if (username == null || password == null) {
             System.out.println("Error: username or password not set in the environment.");
             System.exit(1);
         }
@@ -30,9 +31,9 @@ public class App {
         ds.setPassword(password);
 
         // try to connect to the northwind database using the username and password we provided
-        try (Connection connection = ds.getConnection()){
+        try (Connection connection = ds.getConnection()) {
 
-            while (true){
+            while (true) {
                 int input = getAInteger("""
                         What do you want to do?
                             1) Display All Shippers
@@ -56,7 +57,7 @@ public class App {
                         updateShipperPhone(connection);
                         break;
                     case 4:
-                        //deleteShipper(connection);
+                        deleteShipper(connection);
                         break;
                     default:
                         System.out.println("Invalid choice");
@@ -105,8 +106,7 @@ public class App {
         String phone = scanner.nextLine();
 
         String sql = "INSERT INTO Shippers (CompanyName, Phone) VALUES (?, ?)";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql))
-        {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
             preparedStatement.setString(1, companyName);
             preparedStatement.setString(2, phone);
@@ -131,18 +131,47 @@ public class App {
         String phone = scanner.nextLine();
 
         String sql = "UPDATE Shippers SET Phone = ? WHERE ShipperID = ?";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql))
-        {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
             preparedStatement.setString(1, phone);
             preparedStatement.setInt(2, shipperID);
 
-            // Insert row
+            // update row
             preparedStatement.executeUpdate();
 
 
         } catch (SQLException e) {
             System.out.println("Could not update the shipper" + e);
+            System.exit(1);
+        }
+
+    }
+
+    // this method removes a shipper from the database
+    private static void deleteShipper(Connection connection) {
+
+        int shipperID = getAInteger("What is the shipper ID? ");
+
+        String sql = "DELETE FROM Shippers WHERE ShipperID = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setInt(1, shipperID);
+
+            // verify user decision
+            System.out.println("Are you sure you want to delete this shipper? " + shipperID);
+            String input = scanner.nextLine();
+
+            if (input.equalsIgnoreCase("yes") || input.contains("y")) {
+                // delete row
+                preparedStatement.executeUpdate();
+                System.out.println("Shipper removed successfully");
+            } else {
+                System.out.println("Operation canceled, no changes have been made.");
+            }
+
+
+        } catch (SQLException e) {
+            System.out.println("Could not remove the shipper" + e);
             System.exit(1);
         }
 
