@@ -1,15 +1,21 @@
 package com.pluralsight;
 
+import com.pluralsight.dao.ShipperDAO;
+import com.pluralsight.models.Shipper;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class App {
 
-    private static Scanner scanner = new Scanner(System.in);
+    // CLASS ATTRIBUTES
+    private static final Scanner scanner = new Scanner(System.in);
 
-    public static void main(String[] args) throws SQLException, ClassNotFoundException {
+    public static void main(String[] args)  {
+
+        // get credentials from the env
         String username = System.getenv("username");
         String password = System.getenv("password");
 
@@ -18,6 +24,7 @@ public class App {
             System.exit(1);
         }
 
+        // start app
         startMenu(username, password);
 
     }
@@ -25,39 +32,45 @@ public class App {
     // this method display the start menu options for the app
     private static void startMenu(String username, String password) {
 
-        BasicDataSource ds = new BasicDataSource();
-        ds.setUrl("jdbc:mysql://localhost:3306/northwind");
-        ds.setUsername(username);
-        ds.setPassword(password);
-
         // try to connect to the northwind database using the username and password we provided
-        try (Connection connection = ds.getConnection()) {
+        try (BasicDataSource ds = new BasicDataSource()) {
+
+            // set the DS config
+            ds.setUrl("jdbc:mysql://localhost:3306/northwind");
+            ds.setUsername(username);
+            ds.setPassword(password);
+
+            ShipperDAO shipperDAO = new ShipperDAO(ds);
+
+            // initialize menu message
+            String message = """
+                What do you want to do?
+                    1) Display All Shippers
+                    2) Add a Shipper
+                    3) Update Shipper Contact
+                    4) Delete a Shipper
+                    0) Exit
+                Select an option:\s""";
 
             while (true) {
-                int input = getAInteger("""
-                        What do you want to do?
-                            1) Display All Shippers
-                            2) Add a Shipper
-                            3) Update Shipper Contact
-                            4) Delete a Shipper
-                            0) Exit
-                        Select an option:\s""");
+
+                int input = getAInteger(message);
 
                 switch (input) {
                     case 0:
                         System.out.println("Goodbye!");
                         System.exit(0);
                     case 1:
-                        displayAllShippers(connection);
+                        processDisplayAllShippers(shipperDAO);
                         break;
                     case 2:
-                        addShipper(connection);
+                        processAddShipper(shipperDAO);
                         break;
                     case 3:
-                        updateShipperPhone(connection);
+                        processUpdateShipperPhone(shipperDAO);
                         break;
                     case 4:
-                        deleteShipper(connection);
+                        processDeleteShipper(shipperDAO);
                         break;
                     default:
                         System.out.println("Invalid choice");
@@ -65,39 +78,25 @@ public class App {
             }
 
         } catch (SQLException e) {
-            System.out.println("Could not connect to DB");
+            System.out.println("Failed to connect to DB");
             System.exit(1);
         }
     }
 
     // this method displays all shippers in the database sorted by shipper id
-    private static void displayAllShippers(Connection connection) {
+    private static void processDisplayAllShippers(ShipperDAO shipperDAO) {
 
-        try (
+        ArrayList<Shipper> shippers = shipperDAO.displayAllShippers();
 
-                PreparedStatement preparedStatement = connection.prepareStatement("""
-                        SELECT
-                            *
-                        FROM
-                            Shippers
-                        ORDER BY
-                            ShipperID;
-                        """
-                );
-
-                ResultSet results = preparedStatement.executeQuery();
-
-        ) {
-            printResults(results);
-        } catch (SQLException e) {
-            System.out.println("Could not get all the shippers");
-            System.exit(1);
+        if (shippers.isEmpty()) {
+            System.out.println("No results");
+        } else {
+            shippers.forEach(System.out::println);
         }
-
     }
 
     // this method adds a shipper to the database
-    private static void addShipper(Connection connection) {
+    private static void processAddShipper(ShipperDAO shipperDAO) {
 
         System.out.print("What is the shipper company name? ");
         String companyName = scanner.nextLine();
@@ -105,106 +104,41 @@ public class App {
         System.out.print("What is the shipper phone number? ");
         String phone = scanner.nextLine();
 
-        String sql = "INSERT INTO Shippers (CompanyName, Phone) VALUES (?, ?)";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            preparedStatement.setString(1, companyName);
-            preparedStatement.setString(2, phone);
-
-            // Insert row
-            preparedStatement.executeUpdate();
-
-
-        } catch (SQLException e) {
-            System.out.println("Could not add the shipper" + e);
-            System.exit(1);
-        }
+        shipperDAO.addShipper(companyName, phone);
+        processDisplayAllShippers(shipperDAO);
 
     }
 
     // this method updates a shipper's phone number
-    private static void updateShipperPhone(Connection connection) {
+    private static void processUpdateShipperPhone(ShipperDAO shipperDAO) {
 
         int shipperID = getAInteger("What is the shipper ID? ");
 
         System.out.print("What is the shipper's new phone number? ");
         String phone = scanner.nextLine();
 
-        String sql = "UPDATE Shippers SET Phone = ? WHERE ShipperID = ?";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            preparedStatement.setString(1, phone);
-            preparedStatement.setInt(2, shipperID);
-
-            // update row
-            preparedStatement.executeUpdate();
-
-
-        } catch (SQLException e) {
-            System.out.println("Could not update the shipper" + e);
-            System.exit(1);
-        }
+        shipperDAO.updateShipperPhone(shipperID, phone);
+        processDisplayAllShippers(shipperDAO);
 
     }
 
     // this method removes a shipper from the database
-    private static void deleteShipper(Connection connection) {
+    private static void processDeleteShipper(ShipperDAO shipperDAO) {
 
         int shipperID = getAInteger("What is the shipper ID? ");
 
-        String sql = "DELETE FROM Shippers WHERE ShipperID = ?";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+        // verify user decision
+        System.out.println("Are you sure you want to delete this shipper? " + shipperID);
+        String input = scanner.nextLine();
 
-            preparedStatement.setInt(1, shipperID);
-
-            // verify user decision
-            System.out.println("Are you sure you want to delete this shipper? " + shipperID);
-            String input = scanner.nextLine();
-
-            if (input.equalsIgnoreCase("yes") || input.contains("y")) {
-                // delete row
-                preparedStatement.executeUpdate();
-                System.out.println("Shipper removed successfully");
-            } else {
-                System.out.println("Operation canceled, no changes have been made.");
-            }
-
-
-        } catch (SQLException e) {
-            System.out.println("Could not remove the shipper" + e);
-            System.exit(1);
+        if (input.equalsIgnoreCase("yes") || input.contains("y")) {
+            // delete row
+            shipperDAO.deleteShipper(shipperID);
+            System.out.println("Shipper removed successfully");
+            processDisplayAllShippers(shipperDAO);
+        } else {
+            System.out.println("Operation canceled, no changes have been made.");
         }
-
-    }
-
-    // this method will be used in the displayMethods to actually print the results to the screen
-    private static void printResults(ResultSet results) throws SQLException {
-        // get the metadata so we have access to the field names
-        ResultSetMetaData metaData = results.getMetaData();
-        // get the number of rows returned
-        int columnCount = metaData.getColumnCount();
-
-        // prints an empty line to make the results prettier
-        System.out.println();
-
-        while (results.next()) {
-
-            for (int i = 1; i <= columnCount; i++) {
-                // gets the current column name
-                String columnName = metaData.getColumnName(i);
-
-                // get the current column value
-                String value = results.getString(i);
-
-                // print out the column name and column value
-                System.out.println(columnName + ": " + value + " ");
-            }
-
-            // prints an empty line to make the results prettier
-            System.out.println();
-
-        }
-
     }
 
     // this method gets an integer
